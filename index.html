@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitchd — Never miss a campsite cancellation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=Epilogue:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:    #f5f0e8;
+    --paper:    #faf7f2;
+    --navy:     #1c2b3a;
+    --navy-mid: #2a3f54;
+    --navy-lt:  #3d5a73;
+    --amber:    #c9823a;
+    --amber-lt: #e09a52;
+    --slate:    #6b7f8e;
+    --mist:     #9aacb8;
+    --rule:     rgba(28,43,58,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--cream);
+    color: var(--navy);
+    font-family: 'Epilogue', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  section, nav, footer, div, header { position: relative; z-index: 1; }
+  img { display: block; max-width: 100%; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--rule);
+    background: rgba(245,240,232,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+
+  .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+  .logo-mark { width: 28px; height: 28px; }
+  .logo-wordmark {
+    font-family: 'Fraunces', serif;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .logo-wordmark span { color: var(--amber); }
+
+  .nav-links { display: none; align-items: center; gap: 2rem; list-style: none; }
+  .nav-links a { color: var(--slate); text-decoration: none; font-size: 0.78rem; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--navy); }
+  .btn-nav { background: var(--navy) !important; color: var(--cream) !important; padding: 0.5rem 1.1rem !important; border-radius: 2px; }
+
+  /* hamburger */
+  .hamburger { background: none; border: none; cursor: pointer; padding: 0.4rem; display: flex; flex-direction: column; gap: 5px; z-index: 300; -webkit-tap-highlight-color: transparent; }
+  .hamburger span { display: block; width: 22px; height: 2px; background: var(--navy); border-radius: 2px; transition: transform 0.3s, opacity 0.3s; transform-origin: center; }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* mobile drawer */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: var(--cream);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5rem 2rem 3rem;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--navy);
+    text-decoration: none;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--rule);
+    transition: color 0.2s;
+  }
+  .mobile-menu a:first-child { border-top: 1px solid var(--rule); }
+  .mobile-menu a:hover, .mobile-menu a:active { color: var(--amber); }
+  .mobile-cta {
+    margin-top: 2rem !important;
+    background: var(--amber) !important;
+    color: white !important;
+    border-radius: 2px !important;
+    border: none !important;
+    padding: 1rem 2.5rem !important;
+    font-size: 1rem !important;
+    font-family: 'Epilogue', sans-serif !important;
+    font-weight: 500 !important;
+    width: auto !important;
+    border-top: none !important;
+  }
+
+  /* ── HERO ── */
+  .hero { padding: 2.5rem 1.25rem 2rem; }
+
+  .hero-photo {
+    width: 100%;
+    height: 210px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1.75rem;
+    position: relative;
+  }
+  .hero-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 60%; }
+  .hero-photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(28,43,58,0.55) 100%);
+  }
+  .hero-photo-tag {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 2;
+    background: var(--amber);
+    color: white;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+  }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .eyebrow::before { content: ''; display: inline-block; width: 1.2rem; height: 1px; background: var(--amber); flex-shrink: 0; }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.6rem, 10vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+    color: var(--navy);
+  }
+  h1 em { font-style: italic; color: var(--amber); }
+
+  .hero-sub { font-size: 1rem; line-height: 1.7; color: var(--slate); margin-bottom: 2rem; }
+
+  /* ── SCAN FORM ── */
+  .scan-form { background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 1.25rem; }
+  .form-title { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate); margin-bottom: 1rem; padding-bottom: 0.85rem; border-bottom: 1px solid var(--rule); }
+  .form-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate); display: block; margin-bottom: 0.35rem; }
+  .form-input {
+    width: 100%;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--navy);
+    font-family: 'Epilogue', sans-serif;
+    font-size: 1rem;
+    font-weight: 300;
+    padding: 0.75rem 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .form-input:focus { border-color: var(--amber); }
+  .form-input::placeholder { color: var(--mist); }
+  .form-input option { background: white; color: var(--navy); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.65rem; }
+  .form-group { margin-bottom: 0.65rem; }
+  .form-submit {
+    width: 100%;
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    padding: 1rem;
+    font-family: 'Epilogue', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .form-submit:active { background: var(--amber-lt); }
+  .free-note { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--mist); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.65rem; line-height: 1.6; }
+
+  /* ── STATS ── */
+  .stats-bar { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper); }
+  .stat { padding: 1.5rem 1rem; text-align: center; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .stat:nth-child(2) { border-right: none; }
+  .stat:nth-child(3) { border-bottom: none; }
+  .stat:nth-child(4) { border-right: none; border-bottom: none; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 900; line-height: 1; color: var(--navy); letter-spacing: -0.03em; }
+  .stat-num em { color: var(--amber); font-style: normal; }
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); margin-top: 0.4rem; line-height: 1.4; }
+
+  /* ── SECTIONS ── */
+  .section { padding: 3.5rem 1.25rem; }
+  .section-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.75rem; }
+  .section-title { font-family: 'Fraunces', serif; font-size: clamp(1.85rem, 7vw, 3rem); font-weight: 900; line-height: 1.1; letter-spacing: -0.025em; margin-bottom: 0.75rem; color: var(--navy); }
+  .section-sub { color: var(--slate); font-size: 0.95rem; line-height: 1.75; margin-bottom: 2.5rem; }
+
+  /* ── HOW IT WORKS ── */
+  .steps { display: flex; flex-direction: column; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .step { padding: 2rem 1.5rem; border-bottom: 1px solid var(--rule); background: var(--paper); }
+  .step:last-child { border-bottom: none; }
+  .step-num { font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 900; color: rgba(28,43,58,0.07); line-height: 1; margin-bottom: 1rem; letter-spacing: -0.04em; }
+  .step-icon { width: 38px; height: 38px; background: var(--navy); border-radius: 2px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+  .step h3 { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--navy); letter-spacing: -0.02em; }
+  .step p { font-size: 0.875rem; color: var(--slate); line-height: 1.75; }
+  .step-tag { display: inline-block; margin-top: 1rem; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(201,130,58,0.3); padding: 0.25rem 0.55rem; border-radius: 2px; }
+
+  /* ── PHOTO STRIP ── */
+  .photo-strip-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .photo-strip-wrap::-webkit-scrollbar { display: none; }
+  .photo-strip { display: flex; height: 200px; min-width: max-content; }
+  .photo-strip-item { width: 260px; flex-shrink: 0; overflow: hidden; position: relative; }
+  .photo-strip-item img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.85); }
+  .photo-strip-item::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 50%, rgba(28,43,58,0.3) 100%); }
+  .photo-strip-hint { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+
+  /* ── PRICING ── */
+  .pricing-section { background: var(--navy); padding: 3.5rem 1.25rem; color: var(--cream); }
+  .pricing-section .section-eyebrow { color: var(--amber); }
+  .pricing-section .section-title { color: var(--cream); }
+  .pricing-section .section-sub { color: var(--mist); }
+  .pricing-scroll-hint { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); margin-bottom: 1rem; }
+  .pricing-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 -1.25rem; padding: 0 1.25rem 0.5rem; }
+  .pricing-outer::-webkit-scrollbar { display: none; }
+  .pricing-grid { display: flex; gap: 1rem; min-width: max-content; }
+
+  .plan { width: 290px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2rem 1.5rem; display: flex; flex-direction: column; background: rgba(255,255,255,0.02); }
+  .plan.featured { border-color: rgba(201,130,58,0.4); background: rgba(201,130,58,0.07); position: relative; }
+  .plan-badge { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: var(--amber); color: white; font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.28rem 0.75rem; border-radius: 0 0 4px 4px; white-space: nowrap; }
+  .plan-name { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mist); margin-bottom: 1.25rem; margin-top: 0.4rem; }
+  .plan-price { font-family: 'Fraunces', serif; font-size: 3rem; font-weight: 900; line-height: 1; letter-spacing: -0.04em; color: var(--cream); margin-bottom: 0.2rem; }
+  .plan-price sup { font-size: 1.1rem; vertical-align: super; font-family: 'Epilogue', sans-serif; font-weight: 300; }
+  .plan-period { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; color: var(--mist); margin-bottom: 1.5rem; }
+  .plan-divider { height: 1px; background: rgba(255,255,255,0.08); margin-bottom: 1.5rem; }
+  .plan-polling { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; padding: 0.7rem 0.9rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+  .plan.featured .plan-polling { background: rgba(201,130,58,0.1); border-color: rgba(201,130,58,0.25); }
+  .poll-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); }
+  .poll-value { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700; color: var(--cream); letter-spacing: -0.02em; }
+  .plan.featured .poll-value { color: var(--amber); }
+  .plan-desc { font-size: 0.82rem; color: var(--mist); line-height: 1.7; margin-bottom: 1.5rem; }
+
+  .credit-packs { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.4rem; margin-bottom: 1.25rem; }
+  .credit-pkg { border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; padding: 0.65rem 0.4rem; text-align: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .credit-pkg.active, .credit-pkg:active { border-color: var(--amber); background: rgba(201,130,58,0.1); }
+  .pkg-count { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 900; line-height: 1; color: var(--cream); display: block; }
+  .pkg-word { font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist); display: block; margin-top: 0.1rem; }
+  .pkg-price { color: var(--amber); font-size: 0.75rem; font-weight: 500; margin-top: 0.35rem; display: block; font-family: 'DM Mono', monospace; }
+
+  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; flex: 1; }
+  .plan-features li { font-size: 0.8rem; color: rgba(245,240,232,0.7); display: flex; align-items: flex-start; gap: 0.55rem; line-height: 1.5; }
+  .plan-features li .check { color: var(--amber); flex-shrink: 0; margin-top: 1px; font-size: 0.72rem; }
+  .plan-features li.dim { color: rgba(245,240,232,0.25); }
+  .plan-features li.dim .check { color: rgba(245,240,232,0.15); }
+
+  .btn-plan { display: block; text-align: center; padding: 0.9rem; border-radius: 2px; font-size: 0.85rem; font-weight: 500; text-decoration: none; cursor: pointer; border: none; font-family: 'Epilogue', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; }
+  .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(245,240,232,0.7); }
+  .btn-outline:active { border-color: rgba(255,255,255,0.4); }
+  .btn-amber { background: var(--amber); color: white; }
+  .btn-amber:active { background: var(--amber-lt); }
+  .btn-navy-lt { background: rgba(255,255,255,0.08); color: var(--cream); border: 1px solid rgba(255,255,255,0.1); }
+  .btn-navy-lt:active { background: rgba(255,255,255,0.15); }
+
+  /* ── PARKS ── */
+  .parks-section { background: var(--paper); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 3.5rem 1.25rem; }
+  .parks-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin-top: 2rem; }
+  .park-card { padding: 1.1rem 1rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .park-card:nth-child(2n) { border-right: none; }
+  .park-card:nth-last-child(-n+2) { border-bottom: none; }
+  .park-region { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.3rem; }
+  .park-name { font-family: 'Fraunces', serif; font-size: 0.88rem; font-weight: 700; color: var(--navy); line-height: 1.25; letter-spacing: -0.01em; }
+  .park-sites { font-family: 'DM Mono', monospace; font-size: 0.56rem; color: var(--mist); margin-top: 0.25rem; line-height: 1.4; }
+  .parks-more { display: flex; align-items: center; justify-content: center; flex-direction: column; background: rgba(28,43,58,0.03); }
+
+  /* ── FAQ ── */
+  .faq-section { padding: 3.5rem 1.25rem; }
+  .faq-sidebar-mobile { margin-bottom: 2rem; }
+  .faq-list { display: flex; flex-direction: column; }
+  .faq-item { border-bottom: 1px solid var(--rule); }
+  .faq-q { width: 100%; background: none; border: none; color: var(--navy); font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; text-align: left; padding: 1.25rem 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; letter-spacing: -0.01em; line-height: 1.3; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .faq-q .arr { color: var(--amber); font-size: 1.2rem; flex-shrink: 0; transition: transform 0.3s; font-family: 'Epilogue', sans-serif; font-weight: 300; }
+  .faq-item.open .faq-q .arr { transform: rotate(45deg); }
+  .faq-a { display: none; padding: 0 0 1.25rem; font-size: 0.875rem; color: var(--slate); line-height: 1.8; }
+  .faq-item.open .faq-a { display: block; }
+
+  /* ── CTA ── */
+  .cta-section { background: var(--navy); padding: 4rem 1.25rem; text-align: center; position: relative; overflow: hidden; }
+  .cta-section::before { content: ''; position: absolute; inset: 0; background-image: url('https://assets.stackwelldigital.com/pitchd/mike-erskine-S_VbdMTsdiA-unsplash.jpg'); background-size: cover; background-position: center 40%; opacity: 0.1; }
+  .cta-section::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(201,130,58,0.12) 0%, transparent 70%); }
+  .cta-section h2 { font-family: 'Fraunces', serif; font-size: clamp(2.2rem, 9vw, 4rem); font-weight: 900; letter-spacing: -0.03em; color: var(--cream); line-height: 1.05; margin-bottom: 1rem; position: relative; z-index: 1; }
+  .cta-section h2 em { font-style: italic; color: var(--amber); }
+  .cta-section p { color: var(--mist); font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.75; position: relative; z-index: 1; }
+  .btn-cta { display: inline-block; background: var(--amber); color: white; padding: 1rem 2.25rem; border-radius: 2px; font-family: 'Epilogue', sans-serif; font-size: 0.95rem; font-weight: 500; text-decoration: none; touch-action: manipulation; position: relative; z-index: 1; -webkit-tap-highlight-color: transparent; }
+  .btn-cta:active { background: var(--amber-lt); }
+  .cta-sub { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: rgba(154,172,184,0.5); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 1rem; position: relative; z-index: 1; line-height: 1.8; }
+
+  /* ── FOOTER ── */
+  footer { border-top: 1px solid var(--rule); padding: 2rem 1.25rem; background: var(--paper); }
+  .footer-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; list-style: none; margin-bottom: 1.25rem; }
+  .footer-links a { color: var(--mist); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.05em; }
+  .footer-links a:hover { color: var(--navy); }
+  .footer-copy { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--mist); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* ── DESKTOP 768px+ ── */
+  @media (min-width: 768px) {
+    nav { padding: 1.5rem 3rem; }
+    .hamburger { display: none; }
+    .nav-links { display: flex; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1fr; padding: 0; min-height: 90vh; align-items: stretch; }
+    .hero-left { padding: 6rem 4rem; display: flex; flex-direction: column; justify-content: center; border-right: 1px solid var(--rule); }
+    .hero-photo { display: none; }
+    .hero-right-panel { display: flex !important; background: var(--navy); align-items: center; justify-content: center; padding: 4rem; position: relative; overflow: hidden; }
+    .hero-right-panel::before { content: ''; position: absolute; inset: 0; background-image: url('https://assets.stackwelldigital.com/pitchd/scott-goodwill-y8Ngwq34_Ak-unsplash.jpg'); background-size: cover; background-position: center; opacity: 0.15; z-index: 0; }
+    .hero-right-panel::after { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 28px 28px; z-index: 1; }
+
+    .stats-bar { grid-template-columns: repeat(4,1fr); }
+    .stat { border-bottom: none; padding: 2.5rem 2rem; }
+    .stat:nth-child(2) { border-right: 1px solid var(--rule); }
+    .stat:nth-child(4) { border-right: none; }
+    .stat-num { font-size: 2.75rem; }
+
+    .section { padding: 6rem 4rem; max-width: 1300px; margin: 0 auto; }
+    .steps { flex-direction: row; }
+    .step { flex: 1; border-bottom: none; border-right: 1px solid var(--rule); }
+    .step:last-child { border-right: none; }
+
+    .photo-strip { min-width: unset; height: 280px; }
+    .photo-strip-item { width: auto; flex: 1; }
+    .photo-strip-hint { display: none; }
+
+    .pricing-section { padding: 6rem 4rem; }
+    .pricing-scroll-hint { display: none; }
+    .pricing-outer { margin: 0; padding: 0; overflow: visible; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; min-width: unset; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+    .plan { width: auto; border: none; border-right: 1px solid rgba(255,255,255,0.08); border-radius: 0; }
+    .plan:last-child { border-right: none; }
+    .plan.featured { border: none; border-right: 1px solid rgba(201,130,58,0.2); border-left: 1px solid rgba(201,130,58,0.2); margin-left: -1px; }
+
+    .parks-section { padding: 6rem 4rem; }
+    .parks-inner { max-width: 1300px; margin: 0 auto; }
+    .parks-grid { grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); }
+    .park-card { padding: 1.4rem 1.6rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .park-card:nth-child(2n) { border-right: 1px solid var(--rule); }
+    .park-card:nth-last-child(-n+2) { border-bottom: 1px solid var(--rule); }
+
+    .faq-section { padding: 6rem 4rem; max-width: 1300px; margin: 0 auto; }
+    .faq-sidebar-mobile { display: none; }
+    .faq-content { display: grid; grid-template-columns: 1fr 2fr; gap: 6rem; align-items: start; }
+    .faq-desktop-sidebar { display: block !important; position: sticky; top: 6rem; }
+
+    .cta-section { padding: 7rem 4rem; }
+    footer { padding: 2.5rem 4rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .footer-top { display: none; }
+    .footer-links { margin-bottom: 0; }
+  }
+
+  @media (min-width: 1100px) {
+    nav { padding: 1.75rem 5rem; }
+    .section { padding: 8rem 5rem; }
+    .pricing-section { padding: 8rem 5rem; }
+    .parks-section { padding: 8rem 5rem; }
+    .faq-section { padding: 8rem 5rem; }
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .eyebrow    { animation: fadeUp 0.5s ease both; }
+  h1          { animation: fadeUp 0.5s ease 0.08s both; }
+  .hero-sub   { animation: fadeUp 0.5s ease 0.15s both; }
+  .scan-form  { animation: fadeUp 0.5s ease 0.2s both; }
+  .hero-photo { animation: fadeUp 0.5s ease both; }
+</style>
+</head>
+<body>
+
+<!-- MOBILE DRAWER -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#how-it-works" onclick="closeMenu()">How It Works</a>
+  <a href="#pricing" onclick="closeMenu()">Pricing</a>
+  <a href="#parks" onclick="closeMenu()">Parks</a>
+  <a href="#faq" onclick="closeMenu()">FAQ</a>
+  <a href="#pricing" class="mobile-cta" onclick="closeMenu()">Start Free →</a>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <svg class="logo-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 4 L2 26 L30 26 Z" fill="#1c2b3a"/>
+      <path d="M16 4 L9 26" stroke="#c9823a" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="16" cy="4" r="2" fill="#c9823a"/>
+      <line x1="2" y1="26" x2="30" y2="26" stroke="#1c2b3a" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span class="logo-wordmark">Pitch<span>d</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#parks">Parks</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#pricing" class="btn-nav">Start Free</a></li>
+  </ul>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <!-- mobile photo -->
+  <div class="hero-photo">
+    <img src="https://assets.stackwelldigital.com/pitchd/scott-goodwill-y8Ngwq34_Ak-unsplash.jpg" alt="Camping in BC mountains" />
+    <div class="hero-photo-tag">⚡ Alerts in as little as 5 min</div>
+  </div>
+
+  <!-- hero content -->
+  <div class="hero-left" style="flex:1;">
+    <p class="eyebrow">BC Parks · Parks Canada · Recreation.gov</p>
+    <h1>Your campsite<br>is out there.<br><em>We'll find it.</em></h1>
+    <p class="hero-sub">Pitchd watches sold-out campgrounds around the clock and texts you the second a cancellation matches your trip. You click, you book.</p>
+
+    <div class="scan-form">
+      <div class="form-title">▸ Create a free scan</div>
+      <div class="form-group">
+        <label class="form-label">Park or Campground</label>
+        <input type="text" class="form-input" placeholder="e.g. Garibaldi Provincial Park…" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Arrival Date</label>
+          <input type="date" class="form-input" />
+        </div>
+        <div>
+          <label class="form-label">Nights</label>
+          <select class="form-input">
+            <option>1 night</option>
+            <option>2 nights</option>
+            <option selected>3 nights</option>
+            <option>4 nights</option>
+            <option>5 nights</option>
+            <option>6+ nights</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mobile Number</label>
+        <input type="tel" class="form-input" placeholder="+1 (604) 555-0000" autocomplete="tel" />
+      </div>
+      <button class="form-submit">Watch This Park →</button>
+      <p class="free-note">Free · 1 scan per number · email only · checks every 4 hrs</p>
+    </div>
+  </div>
+
+  <!-- desktop right panel -->
+  <div class="hero-right-panel" style="display:none; flex:1;">
+    <div style="position:relative;z-index:2;width:100%;max-width:310px;">
+      <div style="position:absolute;top:-1rem;right:-0.5rem;background:var(--amber);color:white;font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;padding:0.35rem 0.75rem;border-radius:20px;white-space:nowrap;z-index:3;">⚡ Alerted in 5 min</div>
+      <div style="background:#0f1c28;border:2px solid rgba(255,255,255,0.1);border-radius:20px;padding:1.5rem;box-shadow:0 40px 100px rgba(0,0,0,0.5);">
+        <div style="width:48px;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;margin:0 auto 1.25rem;"></div>
+        <div style="background:#1a8cff;border-radius:14px 14px 14px 4px;padding:1rem 1.1rem;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem;">Pitchd · Campsite Alert</div>
+          <div style="font-size:0.82rem;color:white;line-height:1.55;font-family:'Epilogue',sans-serif;">
+            <strong>🏕️ Rathtrevor Beach — Site #42</strong><br>
+            Aug 14–17 · Full Hookup · 3 nights<br><br>
+            Someone just cancelled. Move fast.
+          </div>
+          <div style="display:inline-block;margin-top:0.6rem;background:rgba(255,255,255,0.2);color:white;font-size:0.68rem;padding:0.3rem 0.65rem;border-radius:4px;font-family:'DM Mono',monospace;letter-spacing:0.05em;">→ Book now on BC Parks</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.55rem;color:rgba(255,255,255,0.3);text-align:right;margin-top:0.5rem;letter-spacing:0.08em;">Today 6:43 AM · Delivered</div>
+      </div>
+      <div style="position:absolute;bottom:2rem;left:-1.5rem;background:var(--navy-lt);color:white;font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;padding:0.35rem 0.75rem;border-radius:20px;white-space:nowrap;z-index:3;">🏔️ Garibaldi — just opened</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">2<em>,</em>400<em>+</em></div><div class="stat-label">Parks Monitored</div></div>
+  <div class="stat"><div class="stat-num">5<em>min</em></div><div class="stat-label">Fastest Alert</div></div>
+  <div class="stat"><div class="stat-num">BC<em>+</em>AB</div><div class="stat-label">Coverage</div></div>
+  <div class="stat"><div class="stat-num">24<em>/</em>7</div><div class="stat-label">Always On</div></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section" id="how-it-works">
+  <p class="section-eyebrow">How It Works</p>
+  <h2 class="section-title">Three steps to your perfect campsite.</h2>
+  <p class="section-sub">No bots. No auto-booking. We watch relentlessly — you just show up.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 14h14L9 2z" stroke="#f5f0e8" stroke-width="1.5" stroke-linejoin="round"/><line x1="9" y1="2" x2="6" y2="14" stroke="#c9823a" stroke-width="1" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Tell us where you want to pitch</h3>
+      <p>Search any BC Parks, Parks Canada, or Recreation.gov campground. Set your dates, nights, and site preferences.</p>
+      <span class="step-tag">Takes 60 seconds</span>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="#f5f0e8" stroke-width="1.5"/><circle cx="9" cy="9" r="2" fill="#c9823a"/><line x1="9" y1="3" x2="9" y2="1" stroke="#f5f0e8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>We watch it around the clock</h3>
+      <p>Pitchd polls the booking system continuously. The moment a cancellation matches your criteria, we catch it before anyone else.</p>
+      <span class="step-tag">24/7 monitoring</span>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke="#f5f0e8" stroke-width="1.5"/><path d="M5 8h8M5 11h5" stroke="#c9823a" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <h3>You get a text — act fast</h3>
+      <p>We fire you an SMS with a direct booking link. Tap it, check availability, and reserve before someone else does.</p>
+      <span class="step-tag">SMS fired instantly</span>
+    </div>
+  </div>
+</div>
+
+<!-- PHOTO STRIP -->
+<div class="photo-strip-wrap">
+  <div class="photo-strip">
+    <div class="photo-strip-item"><img src="https://assets.stackwelldigital.com/pitchd/dominik-jirovsky-re2LZOB2XvY-unsplash.jpg" alt="BC camping" loading="lazy" /></div>
+    <div class="photo-strip-item"><img src="https://assets.stackwelldigital.com/pitchd/jonathan-forage-1azAjl8FTnU-unsplash.jpg" alt="Mountain campsite" loading="lazy" /></div>
+    <div class="photo-strip-item"><img src="https://assets.stackwelldigital.com/pitchd/laurine-bailly-qkMQ5N2d9aY-unsplash.jpg" alt="Forest camping" loading="lazy" /></div>
+    <div class="photo-strip-item"><img src="https://assets.stackwelldigital.com/pitchd/pars-sahin-V7uP-XzqX18-unsplash.jpg" alt="Tent in wilderness" loading="lazy" /></div>
+    <div class="photo-strip-item"><img src="https://assets.stackwelldigital.com/pitchd/glen-jackson-mzZVGFfMOkA-unsplash.jpg" alt="BC wilderness" loading="lazy" /></div>
+  </div>
+  <p class="photo-strip-hint">← swipe to see more →</p>
+</div>
+
+<!-- PRICING -->
+<div class="pricing-section" id="pricing">
+  <p class="section-eyebrow">Pricing</p>
+  <h2 class="section-title">Start free.<br>Upgrade when it matters.</h2>
+  <p class="section-sub">No subscription to get started. Credits never expire. Cancel anytime.</p>
+  <p class="pricing-scroll-hint">← swipe to compare plans →</p>
+  <div class="pricing-outer">
+    <div class="pricing-grid">
+
+      <div class="plan">
+        <div class="plan-name">Trailhead</div>
+        <div class="plan-price">Free</div>
+        <div class="plan-period">forever · no card required</div>
+        <div class="plan-divider"></div>
+        <div class="plan-polling"><span class="poll-label">Checks every</span><span class="poll-value">4 hrs</span></div>
+        <div class="plan-desc">Better than refreshing manually. One scan per phone number — enough to try it out, not enough to rely on for a hot park on a long weekend.</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 1 active scan</li>
+          <li><span class="check">✓</span> Email alerts</li>
+          <li><span class="check">✓</span> BC Parks + Parks Canada</li>
+          <li class="dim"><span class="check">✗</span> SMS alerts</li>
+          <li class="dim"><span class="check">✗</span> Flexible date range</li>
+          <li class="dim"><span class="check">✗</span> Site type filters</li>
+        </ul>
+        <a href="#" class="btn-plan btn-outline">Start Watching Free</a>
+      </div>
+
+      <div class="plan featured">
+        <div class="plan-badge">Most Popular</div>
+        <div class="plan-name">Credit Packs</div>
+        <div class="plan-price"><sup>$</sup>5</div>
+        <div class="plan-period">per pack · credits never expire</div>
+        <div class="plan-divider"></div>
+        <div class="plan-polling"><span class="poll-label">Checks every</span><span class="poll-value">1 hr</span></div>
+        <div class="plan-desc">Hourly polling means you're actually competitive — not finding out 4 hours after a spot opened and closed.</div>
+        <div class="credit-packs">
+          <div class="credit-pkg active"><span class="pkg-count">3</span><span class="pkg-word">scans</span><span class="pkg-price">$5</span></div>
+          <div class="credit-pkg"><span class="pkg-count">10</span><span class="pkg-word">scans</span><span class="pkg-price">$15</span></div>
+          <div class="credit-pkg"><span class="pkg-count">25</span><span class="pkg-word">scans</span><span class="pkg-price">$30</span></div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> SMS + Email alerts</li>
+          <li><span class="check">✓</span> All booking systems</li>
+          <li><span class="check">✓</span> Flexible dates (±2 days)</li>
+          <li><span class="check">✓</span> Site type filters</li>
+          <li><span class="check">✓</span> Credits never expire</li>
+          <li class="dim"><span class="check">✗</span> Priority 5-min polling</li>
+        </ul>
+        <a href="#" class="btn-plan btn-amber">Buy a Credit Pack</a>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Season Pass</div>
+        <div class="plan-price"><sup>$</sup>12</div>
+        <div class="plan-period">/ month · cancel anytime</div>
+        <div class="plan-divider"></div>
+        <div class="plan-polling"><span class="poll-label">Checks every</span><span class="poll-value">5 min</span></div>
+        <div class="plan-desc">By the time someone else sees a cancellation, you've already booked it. Unlimited scans, fastest polling, every feature unlocked.</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Unlimited concurrent scans</li>
+          <li><span class="check">✓</span> SMS + Email alerts</li>
+          <li><span class="check">✓</span> Priority 5-min polling</li>
+          <li><span class="check">✓</span> All booking systems</li>
+          <li><span class="check">✓</span> Flexible dates (±3 days)</li>
+          <li><span class="check">✓</span> All site type filters</li>
+        </ul>
+        <a href="#" class="btn-plan btn-navy-lt">Get Season Pass</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- PARKS -->
+<div class="parks-section" id="parks">
+  <div class="parks-inner">
+    <p class="section-eyebrow">Coverage</p>
+    <h2 class="section-title">Parks BC campers actually fight over.</h2>
+    <p class="section-sub">The most-watched provincial and national parks in BC and Alberta — always adding more.</p>
+    <div class="parks-grid">
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Garibaldi</div><div class="park-sites">Cheakamus · Diamond Head</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Rathtrevor Beach</div><div class="park-sites">174 sites · Hookups</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Cultus Lake</div><div class="park-sites">300 sites</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Porpoise Bay</div><div class="park-sites">Sechelt · 84 sites</div></div>
+      <div class="park-card"><div class="park-region">Parks Canada</div><div class="park-name">Pacific Rim NP</div><div class="park-sites">Green Point</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Golden Ears</div><div class="park-sites">Alouette Lake</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Strathcona</div><div class="park-sites">Battle · Buttle Lake</div></div>
+      <div class="park-card"><div class="park-region">Parks Canada</div><div class="park-name">Banff NP</div><div class="park-sites">Tunnel Mtn · Two Jack</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Englishman River</div><div class="park-sites">Vancouver Island</div></div>
+      <div class="park-card"><div class="park-region">Parks Canada</div><div class="park-name">Yoho NP</div><div class="park-sites">Kicking Horse</div></div>
+      <div class="park-card"><div class="park-region">BC Parks</div><div class="park-name">Mount Robson</div><div class="park-sites">Berg Lake Trail</div></div>
+      <div class="park-card parks-more">
+        <div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:var(--navy);letter-spacing:-0.02em;text-align:center;">+2,400</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber);margin-top:0.25rem;">more parks</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-section" id="faq">
+  <!-- mobile header -->
+  <div class="faq-sidebar-mobile">
+    <p class="section-eyebrow">FAQ</p>
+    <h2 class="section-title">Good questions.</h2>
+    <p style="color:var(--slate);font-size:0.9rem;line-height:1.75;margin-top:0.5rem;">Anything else? Email us — we actually respond.</p>
+  </div>
+
+  <div class="faq-content">
+    <!-- desktop sidebar -->
+    <div class="faq-desktop-sidebar" style="display:none;">
+      <p class="section-eyebrow">FAQ</p>
+      <h2 class="section-title">Good questions.</h2>
+      <p style="color:var(--slate);font-size:0.9rem;line-height:1.75;margin-top:0.75rem;">Anything else? Email us — we actually respond.</p>
+    </div>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Does this actually work? <span class="arr">+</span></button>
+        <div class="faq-a">Yes — but it's not magic. Pitchd catches real cancellations as they happen. If nobody cancels a matching spot, you won't get an alert. Best odds: scan multiple parks, turn on flexible dates, keep your minimum nights low.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Will it auto-book for me? <span class="arr">+</span></button>
+        <div class="faq-a">Nope — and we'll never do that. Auto-booking is against booking system terms and bad for the camping community. We alert you, you book through the park's official site.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What booking systems do you cover? <span class="arr">+</span></button>
+        <div class="faq-a">Discover Camping (BC Parks), Parks Canada, Recreation.gov, and Reserve America. Continuously adding more — drop us a line if you need a specific park.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">How fast will I get alerted? <span class="arr">+</span></button>
+        <div class="faq-a">Free checks every 4 hours. Credit packs run every hour. Season Pass gets priority 5-minute polling. For a high-demand park, Season Pass is absolutely worth it.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Do credits expire? <span class="arr">+</span></button>
+        <div class="faq-a">Never. Buy in March, use in September. They're yours until you spend them.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Can I cancel Season Pass anytime? <span class="arr">+</span></button>
+        <div class="faq-a">Absolutely. No contracts. Cancel from your dashboard and you keep access until the end of the billing period.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Stop refreshing.<br><em>Start camping.</em></h2>
+  <p>Let Pitchd do the watching while you get on with your life.</p>
+  <a href="#pricing" class="btn-cta">Create Your First Scan — Free</a>
+  <p class="cta-sub">No credit card · 1 scan per number · cancel anytime</p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <a href="#" class="logo">
+      <svg class="logo-mark" viewBox="0 0 32 32" fill="none">
+        <path d="M16 4 L2 26 L30 26 Z" fill="#1c2b3a"/>
+        <path d="M16 4 L9 26" stroke="#c9823a" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="16" cy="4" r="2" fill="#c9823a"/>
+      </svg>
+      <span class="logo-wordmark">Pitch<span>d</span></span>
+    </a>
+  </div>
+  <ul class="footer-links">
+    <li><a href="#">How It Works</a></li>
+    <li><a href="#">Pricing</a></li>
+    <li><a href="#">Parks</a></li>
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <div class="footer-copy">© 2025 Pitchd · Built in BC 🏔️</div>
+</footer>
+
+<script>
+  // hamburger
+  function toggleMenu() {
+    const menu = document.getElementById('mobileMenu');
+    const burger = document.getElementById('hamburger');
+    const isOpen = menu.classList.toggle('open');
+    burger.classList.toggle('open');
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  }
+
+  function closeMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburger').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // faq
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  }
+
+  // credit packs
+  document.querySelectorAll('.credit-pkg').forEach(pkg => {
+    pkg.addEventListener('click', () => {
+      document.querySelectorAll('.credit-pkg').forEach(p => p.classList.remove('active'));
+      pkg.classList.add('active');
+    });
+  });
+
+  // scroll fade in
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.06 });
+
+  document.querySelectorAll('.stat, .step, .plan, .park-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(14px)';
+    el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    io.observe(el);
+  });
+</script>
+</body>
+</html>
